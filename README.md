@@ -1,0 +1,2 @@
+# DSSim
+Double star simulator
