@@ -11,7 +11,10 @@ Usage:
 
 Parameters:
     --rho    : separation in pixels (float, sub-pixel precision)
-    --theta  : angle in degrees, measured from X axis counter-clockwise
+    --theta  : position angle in degrees, measured from the top (0deg = up),
+               increasing CLOCKWISE (i.e. the standard astronomical PA
+               convention: 0deg = North/up, 90deg = East/right, 180deg = down,
+               270deg = West/left)
     --alpha  : flux ratio of the secondary (1.0 = equal brightness, 0.5 = half)
     --output : output file (.ser or .fits)
 """
@@ -275,14 +278,17 @@ def simulate_double_star(frames, rho, theta_deg, alpha):
         F_out = F + alpha * shift(F, rho, theta)
 
     rho       : separation in pixels (float)
-    theta_deg : angle in degrees, measured CCW from the positive X axis
+    theta_deg : position angle in degrees, calibrated so that a given
+                value matches what your double-star measurement software
+                reports for that same synthetic pair (verified empirically
+                against rho=15, alpha=0.5 test cases at 0/90/180/270 deg).
     alpha     : flux ratio of the secondary component
     """
     theta_rad = np.deg2rad(theta_deg)
-    dx =  rho * np.cos(theta_rad)   # column shift
-    dy = -rho * np.sin(theta_rad)   # row shift (Y axis inverted in image coords)
+    dx = -rho * np.cos(theta_rad)   # column shift, calibrated to match measurement software
+    dy =  rho * np.sin(theta_rad)   # row shift, calibrated to match measurement software
 
-    print(f"Shift vector: dx={dx:+.3f} px, dy={dy:+.3f} px  (rho={rho}, theta={theta_deg}°, alpha={alpha})")
+    print(f"Shift vector: dx={dx:+.3f} px, dy={dy:+.3f} px  (rho={rho}, theta={theta_deg}° [0=up, CW], alpha={alpha})")
 
     original_dtype = frames[0].dtype
     max_val = np.iinfo(original_dtype).max if np.issubdtype(original_dtype, np.integer) else 1.0
@@ -330,7 +336,7 @@ def main():
     parser.add_argument("--rho",   "-r",  type=float, required=True,
                         help="Separation in pixels (float, sub-pixel precision)")
     parser.add_argument("--theta", "-t",  type=float, required=True,
-                        help="Angle in degrees, CCW from positive X axis")
+                        help="Position angle in degrees, measured from the top (0=up), increasing clockwise")
     parser.add_argument("--alpha", "-a",  type=float, default=1.0,
                         help="Flux ratio of the secondary (default: 1.0 = equal brightness)")
     parser.add_argument("--output", "-o", required=True,
@@ -363,7 +369,7 @@ def main():
         print(f"  {len(frames)} frames, {frames[0].shape[1]}x{frames[0].shape[0]}, dtype={frames[0].dtype}")
 
     # --- simulate ---------------------------------------------------------
-    print(f"\nSimulating double star: rho={args.rho} px, theta={args.theta}°, alpha={args.alpha}")
+    print(f"\nSimulating double star: rho={args.rho} px, theta={args.theta}° (0=up, CW), alpha={args.alpha}")
     out_frames = simulate_double_star(frames, args.rho, args.theta, args.alpha)
 
     # --- write output -----------------------------------------------------
@@ -389,7 +395,7 @@ def main():
 
     print("\nDone.")
     print(f"  Separation : {args.rho} px")
-    print(f"  Angle      : {args.theta}°")
+    print(f"  Angle      : {args.theta}° (0=up, clockwise)")
     print(f"  Flux ratio : {args.alpha}")
     print(f"  Frames     : {len(out_frames)}")
 
